@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Depósito QR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-card: #141824;
+            --bg-card-hover: #1a1f2e;
+            --accent-primary: #00f5d4;
+            --accent-secondary: #7b2cbf;
+            --accent-tertiary: #fb5607;
+            --text-primary: #e0e6f0;
+            --text-secondary: #8b94a8;
+            --border: #2a3042;
+            --success: #06ffa5;
+            --warning: #ffb703;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(123, 44, 191, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(0, 245, 212, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        .setup-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 245, 212, 0.1);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Outfit', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 245, 212, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-card-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent-primary);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent-primary);
+        }
+
+        .qr-container {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .qr-display {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 1rem 0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .qr-display img {
+            display: block;
+            width: 300px;
+            height: 300px;
+        }
+
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .item-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .item-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 245, 212, 0.2);
+        }
+
+        .item-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .item-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-info {
+            background: rgba(0, 245, 212, 0.1);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .alert-success {
+            background: rgba(6, 255, 165, 0.1);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .alert-warning {
+            background: rgba(255, 183, 3, 0.1);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .code-block {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--accent-primary);
+            overflow-x: auto;
+            margin: 1rem 0;
+            word-break: break-all;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .location-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 245, 212, 0.15);
+            border: 1px solid var(--accent-primary);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+            margin-top: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .items-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const STORAGE_KEY = 'inventory_sheets_config';
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('config');
+            const [config, setConfig] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [message, setMessage] = useState(null);
+
+            const [apiKey, setApiKey] = useState('');
+            const [spreadsheetId, setSpreadsheetId] = useState('');
+
+            const [locationId, setLocationId] = useState('');
+            const [locationName, setLocationName] = useState('');
+            const [qrCodeUrl, setQrCodeUrl] = useState('');
+
+            const [selectedLocation, setSelectedLocation] = useState('');
+            const [itemName, setItemName] = useState('');
+            const [itemDescription, setItemDescription] = useState('');
+
+            const [viewLocation, setViewLocation] = useState('');
+            const [items, setItems] = useState([]);
+
+            useEffect(() => {
+                const savedConfig = localStorage.getItem(STORAGE_KEY);
+                if (savedConfig) {
+                    const parsed = JSON.parse(savedConfig);
+                    setConfig(parsed);
+                    setApiKey(parsed.apiKey);
+                    setSpreadsheetId(parsed.spreadsheetId);
+                    setActiveTab('generate');
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const loc = urlParams.get('loc');
+                if (loc) {
+                    setSelectedLocation(loc);
+                    setViewLocation(loc);
+                    setActiveTab('view');
+                }
+            }, []);
+
+            const showMessage = (text, type = 'info') => {
+                setMessage({ text, type });
+                setTimeout(() => setMessage(null), 5000);
+            };
+
+            const saveConfig = () => {
+                if (!apiKey || !spreadsheetId) {
+                    showMessage('Preencha todos os campos!', 'warning');
+                    return;
+                }
+
+                const configData = { apiKey, spreadsheetId };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(configData));
+                setConfig(configData);
+                showMessage('Configuração salva com sucesso!', 'success');
+                setActiveTab('generate');
+            };
+
+            const generateQR = () => {
+                if (!locationId || !locationName) {
+                    showMessage('Preencha o ID e nome da localização!', 'warning');
+                    return;
+                }
+
+                const url = `${window.location.origin}${window.location.pathname}?loc=${encodeURIComponent(locationId)}`;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+                
+                setQrCodeUrl(qrUrl);
+                showMessage('QR Code gerado com sucesso!', 'success');
+            };
+
+            const downloadQR = () => {
+                if (!qrCodeUrl) return;
+                
+                const link = document.createElement('a');
+                link.download = `qr-${locationId}.png`;
+                link.href = qrCodeUrl;
+                link.target = '_blank';
+                link.click();
+            };
+
+            const addItem = async () => {
+                if (!config) {
+                    showMessage('Configure a planilha primeiro!', 'warning');
+                    return;
+                }
+
+                if (!selectedLocation || !itemName) {
+                    showMessage('Preencha a localização e nome do item!', 'warning');
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    const timestamp = new Date().toISOString();
+                    const values = [[selectedLocation, itemName, itemDescription, timestamp]];
+
+                    const response = await fetch(
+                        `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/Itens!A:D:append?valueInputOption=RAW&key=${config.apiKey}`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ values })
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Erro ao adicionar item');
+                    }
+
+                    showMessage('Item adicionado com sucesso!', 'success');
+                    setItemName('');
+                    setItemDescription('');
+                } catch (err) {
+                    showMessage('Erro: ' + err.message, 'warning');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const loadItems = async () => {
+                if (!config || !viewLocation) {
+                    showMessage('Configure a planilha e selecione uma localização!', 'warning');
+                    return;
+                }
+
+                setLoading(true);
+
+                try {
+                    const response = await fetch(
+                        `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/Itens!A:D?key=${config.apiKey}`
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar itens');
+                    }
+
+                    const data = await response.json();
+                    const rows = data.values || [];
+                    
+                    const filteredItems = rows
+                        .slice(1)
+                        .filter(row => row[0] === viewLocation)
+                        .map((row, index) => ({
+                            id: index,
+                            location: row[0],
+                            name: row[1],
+                            description: row[2] || '',
+                            timestamp: row[3] || ''
+                        }));
+
+                    setItems(filteredItems);
+                    showMessage(`${filteredItems.length} itens encontrados`, 'success');
+                } catch (err) {
+                    showMessage('Erro: ' + err.message, 'warning');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="app-container">
+                    <header>
+                        <h1>📦 Sistema de Depósito QR</h1>
+                        <p className="subtitle">Gerencie seu inventário com QR codes e Google Sheets</p>
+                    </header>
+
+                    {message && (
+                        <div className={`alert alert-${message.type}`}>
+                            {message.text}
+                        </div>
+                    )}
+
+                    <div className="tabs">
+                        <button 
+                            className={`tab ${activeTab === 'config' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('config')}
+                        >
+                            ⚙️ Configuração
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'generate' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('generate')}
+                        >
+                            🏷️ Gerar QR Code
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'add' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('add')}
+                        >
+                            ➕ Adicionar Item
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'view' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('view')}
+                        >
+                            📋 Ver Itens
+                        </button>
+                    </div>
+
+                    {activeTab === 'config' && (
+                        <div className="setup-section">
+                            <h2 className="section-title">Configuração do Google Sheets</h2>
+                            
+                            <div className="alert alert-info">
+                                <strong>Instruções:</strong>
+                                <ol style={{marginLeft: '1.5rem', marginTop: '0.5rem'}}>
+                                    <li>Crie uma planilha no Google Sheets</li>
+                                    <li>Adicione uma aba chamada "Itens" com colunas: Localização | Nome | Descrição | Data</li>
+                                    <li>Obtenha sua API Key em: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style={{color: 'var(--accent-primary)'}}>Google Cloud Console</a></li>
+                                    <li>Torne a planilha pública (Compartilhar → Qualquer pessoa com o link)</li>
+                                </ol>
+                            </div>
+
+                            <div className="input-group">
+                                <label>API Key do Google</label>
+                                <input 
+                                    type="text"
+                                    value={apiKey}
+                                    onChange={(e) => setApiKey(e.target.value)}
+                                    placeholder="AIza..."
+                                />
+                            </div>
+
+                            <div className="input-group">
+                                <label>ID da Planilha</label>
+                                <input 
+                                    type="text"
+                                    value={spreadsheetId}
+                                    onChange={(e) => setSpreadsheetId(e.target.value)}
+                                    placeholder="1a2b3c4d..."
+                                />
+                            </div>
+
+                            <button className="btn btn-primary" onClick={saveConfig}>
+                                💾 Salvar Configuração
+                            </button>
+                        </div>
+                    )}
+
+                    {activeTab === 'generate' && (
+                        <div className="setup-section">
+                            <h2 className="section-title">Gerar QR Code para Localização</h2>
+
+                            <div className="input-group">
+                                <label>ID da Localização (único)</label>
+                                <input 
+                                    type="text"
+                                    value={locationId}
+                                    onChange={(e) => setLocationId(e.target.value)}
+                                    placeholder="ex: CAIXA-001, SALA-A, ESTANTE-3"
+                                />
+                            </div>
+
+                            <div className="input-group">
+                                <label>Nome/Descrição da Localização</label>
+                                <input 
+                                    type="text"
+                                    value={locationName}
+                                    onChange={(e) => setLocationName(e.target.value)}
+                                    placeholder="ex: Caixa de Ferramentas, Sala de Reuniões"
+                                />
+                            </div>
+
+                            <button className="btn btn-primary" onClick={generateQR}>
+                                🎯 Gerar QR Code
+                            </button>
+
+                            {qrCodeUrl && (
+                                <div className="qr-container">
+                                    <div className="qr-display">
+                                        <img src={qrCodeUrl} alt="QR Code" />
+                                    </div>
+                                    <div className="location-badge">{locationId}</div>
+                                    <p style={{marginTop: '1rem', color: 'var(--text-secondary)'}}>
+                                        {locationName}
+                                    </p>
+                                    <div className="button-group" style={{justifyContent: 'center', marginTop: '1.5rem'}}>
+                                        <button className="btn btn-secondary" onClick={downloadQR}>
+                                            📥 Baixar QR Code
+                                        </button>
+                                    </div>
+                                    <div className="code-block">
+                                        {`${window.location.origin}${window.location.pathname}?loc=${locationId}`}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'add' && (
+                        <div className="setup-section">
+                            <h2 className="section-title">Adicionar Item</h2>
+
+                            {!config && (
+                                <div className="alert alert-warning">
+                                    Configure a planilha na aba "Configuração" primeiro!
+                                </div>
+                            )}
+
+                            <div className="input-group">
+                                <label>ID da Localização</label>
+                                <input 
+                                    type="text"
+                                    value={selectedLocation}
+                                    onChange={(e) => setSelectedLocation(e.target.value)}
+                                    placeholder="ex: CAIXA-001"
+                                />
+                            </div>
+
+                            <div className="input-group">
+                                <label>Nome do Item</label>
+                                <input 
+                                    type="text"
+                                    value={itemName}
+                                    onChange={(e) => setItemName(e.target.value)}
+                                    placeholder="ex: Martelo, Pasta de Documentos"
+                                />
+                            </div>
+
+                            <div className="input-group">
+                                <label>Descrição (opcional)</label>
+                                <textarea 
+                                    value={itemDescription}
+                                    onChange={(e) => setItemDescription(e.target.value)}
+                                    placeholder="Detalhes adicionais sobre o item..."
+                                />
+                            </div>
+
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={addItem}
+                                disabled={loading || !config}
+                            >
+                                {loading ? <span className="loading" /> : '➕'} Adicionar Item
+                            </button>
+                        </div>
+                    )}
+
+                    {activeTab === 'view' && (
+                        <div className="setup-section">
+                            <h2 className="section-title">Visualizar Itens</h2>
+
+                            {!config && (
+                                <div className="alert alert-warning">
+                                    Configure a planilha na aba "Configuração" primeiro!
+                                </div>
+                            )}
+
+                            <div className="input-group">
+                                <label>ID da Localização</label>
+                                <input 
+                                    type="text"
+                                    value={viewLocation}
+                                    onChange={(e) => setViewLocation(e.target.value)}
+                                    placeholder="ex: CAIXA-001"
+                                />
+                            </div>
+
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={loadItems}
+                                disabled={loading || !config}
+                            >
+                                {loading ? <span className="loading" /> : '🔍'} Buscar Itens
+                            </button>
+
+                            {items.length > 0 ? (
+                                <div className="items-grid">
+                                    {items.map(item => (
+                                        <div key={item.id} className="item-card">
+                                            <div className="item-name">{item.name}</div>
+                                            {item.description && (
+                                                <div className="item-description">{item.description}</div>
+                                            )}
+                                            <div className="location-badge">{item.location}</div>
+                                            <div className="item-meta">
+                                                <span>📅 {new Date(item.timestamp).toLocaleDateString('pt-BR')}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                viewLocation && !loading && (
+                                    <div className="empty-state">
+                                        <div className="empty-state-icon">📭</div>
+                                        <p>Nenhum item encontrado nesta localização</p>
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
